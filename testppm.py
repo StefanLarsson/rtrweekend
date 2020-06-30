@@ -1,8 +1,10 @@
+import sys
+def make_test_ppm(w, h, stream = sys.stdout):
 
-def make_test_ppm(w, h):
-	print ("P3")
-	print (str(w) + " " + str(h))
-	print (255)
+
+	stream.write ("P3\n")
+	stream.write(str(w) + " " + str(h) + '\n')
+	stream.write ("{0}\n".format(255))
 	
 	for j in range(h - 1, 0, -1):
 		for i in range(w):
@@ -12,7 +14,7 @@ def make_test_ppm(w, h):
 			ri = int( r * 255)
 			gi = int( g * 255)
 			bi = int( b * 255)
-			print (ri, gi, bi)
+			stream.write ("{0} {1} {2}\n".format(ri, gi, bi))
 			
 
 
