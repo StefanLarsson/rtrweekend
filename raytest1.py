@@ -1,5 +1,6 @@
 import sys
 import math
+import random
 import numpy as np
 
 
@@ -134,6 +135,8 @@ def make_ray_ppm(stream = sys.stdout):
 	aspect_ratio = 16  / 9
 	width = 384
 	height = int (width / aspect_ratio)
+	samples_per_pixel = 100
+
 
 	world = list()
 	world.append(sphere(np.array([0,0,-1]), 0.5))
@@ -143,11 +146,15 @@ def make_ray_ppm(stream = sys.stdout):
 	cam = camera()
 	stream.write("P3\n{0} {1}\n255\n".format(width, height))
 	for j in range(height - 1, 0, -1):
+		sys.stderr.write("{0} rows to go\n".format(j))
 		for i in range(width):
-			u = i / (width - 1)
-			v = j / (height - 1)
-			r = cam.get_ray(u,v)
-			color = ray_color(r, world)
+			color = np.array([0,0,0])
+			for k in range(samples_per_pixel):
+				u = (i + random.random()) / (width - 1)
+				v = (j + random.random()) / (height - 1)
+				r = cam.get_ray(u,v)
+				color = color + ray_color(r, world)
+			color = color * ( 1 / samples_per_pixel)
 			write_color(color, stream)
 
 	
