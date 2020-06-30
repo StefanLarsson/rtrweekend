@@ -16,7 +16,17 @@ def unit_vector(v):
 	n = np.linalg.norm(v)
 	return v * ( 1/ n)
 		
+def hit_sphere(center, radius, ray):
+	oc = ray.origin - center
+	a = np.dot(ray.direction, ray.direction)
+	b = 2.0 * np.dot (oc, ray.direction)
+	c = np.dot(oc, oc) - radius * radius
+	disc = b * b - 4 * a * c
+	return disc > 0
+	
 def ray_color(r):
+	if (hit_sphere(np.array([0,0,-1]), 0.5, r)):
+		return np.array([1,0,0])
 	unit = unit_vector(r.direction)
 	t = 0.5 * (unit[1] + 1.0)
 	return (1.0 - t) * np.array([1.0, 1.0, 1.0]) + np.array([0.5, 0.7, 1.0])
