@@ -9,8 +9,8 @@ class ray:
 		self.origin = origin
 		self.direction = direction
 
-	def at(t):
-		return origin + t * direction
+	def at(self, t):
+		return self.origin + t * self.direction
 
 def unit_vector(v):
 	n = np.linalg.norm(v)
@@ -23,10 +23,24 @@ def hit_sphere(center, radius, ray):
 	c = np.dot(oc, oc) - radius * radius
 	disc = b * b - 4 * a * c
 	return disc > 0
+
+def hit_sphere2(center, radius, ray):
+	oc = ray.origin - center
+	a = np.dot(ray.direction, ray.direction)
+	b = 2.0 * np.dot (oc, ray.direction)
+	c = np.dot(oc, oc) - radius * radius
+	disc = b * b - 4 * a * c
+	if disc < 0:
+		return -1
+	else:
+		return (- b - math.sqrt(disc)) / (2.0 * a)
+	
 	
 def ray_color(r):
-	if (hit_sphere(np.array([0,0,-1]), 0.5, r)):
-		return np.array([1,0,0])
+	t = hit_sphere2(np.array([0,0,-1]), 0.5, r);
+	if ( t > 0.0):
+		N = unit_vector(r.at(t) - np.array([0,0,-1]))
+		return 0.5 * ( N + 1.0)
 	unit = unit_vector(r.direction)
 	t = 0.5 * (unit[1] + 1.0)
 	return (1.0 - t) * np.array([1.0, 1.0, 1.0]) + np.array([0.5, 0.7, 1.0])
