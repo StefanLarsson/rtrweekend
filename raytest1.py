@@ -62,7 +62,7 @@ def hit_sphere3(center, radius, ray):
 		if (temp > 0):
 			p = ray.at(temp)
 			normal = (p - center) / radius
-			if np.dot(normal, ray.direction) < 0:
+			if np.dot(normal, ray.direction) > 0:
 				normal = -  normal
 			result = hit_record(temp, p, normal)
 			return result
@@ -70,7 +70,7 @@ def hit_sphere3(center, radius, ray):
 		if (temp > 0):
 			p = ray.at(temp)
 			normal = (p - center) / radius
-			if np.dot(normal, ray.direction) < 0:
+			if np.dot(normal, ray.direction) > 0:
 				normal = -  normal
 			result = hit_record(temp, p, normal)
 			return result
