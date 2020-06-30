@@ -12,6 +12,14 @@ class ray:
 	def at(self, t):
 		return self.origin + t * self.direction
 
+
+class sphere:
+	""""A sphere class"""
+	def __init__(self, centre, radius):
+		self.centre = centre
+		self.radius = radius
+
+	
 def unit_vector(v):
 	n = np.linalg.norm(v)
 	return v * ( 1/ n)
@@ -34,13 +42,66 @@ def hit_sphere2(center, radius, ray):
 		return -1
 	else:
 		return (- half_b - math.sqrt(disc)) / a
-	
+class hit_record:
+	def __init__(self, t, p, normal):
+		self.t = t
+		self.p = p
+		self.normal = normal
+
+def hit_sphere3(center, radius, ray):
+	oc = ray.origin - center
+	a = np.dot(ray.direction, ray.direction)
+	half_b = np.dot (oc, ray.direction)
+	c = np.dot(oc, oc) - radius * radius
+	disc = half_b * half_b - a * c
+	if disc < 0:
+		return None
+	else:
+		root = math.sqrt(disc)
+		temp = (- half_b - root) / a
+		if (temp > 0):
+			p = ray.at(temp)
+			normal = (p - center) / radius
+			if np.dot(normal, ray.direction) < 0:
+				normal = -  normal
+			result = hit_record(temp, p, normal)
+			return result
+		temp = (- half_b + root) / a
+		if (temp > 0):
+			p = ray.at(temp)
+			normal = (p - center) / radius
+			if np.dot(normal, ray.direction) < 0:
+				normal = -  normal
+			result = hit_record(temp, p, normal)
+			return result
+	return None
 	
 def ray_color(r):
 	t = hit_sphere2(np.array([0,0,-1]), 0.5, r);
 	if ( t > 0.0):
 		N = unit_vector(r.at(t) - np.array([0,0,-1]))
 		return 0.5 * ( N + 1.0)
+	unit = unit_vector(r.direction)
+	t = 0.5 * (unit[1] + 1.0)
+	return (1.0 - t) * np.array([1.0, 1.0, 1.0]) + np.array([0.5, 0.7, 1.0])
+
+def hit(r, world):
+	closest = 100000000000
+	res = None
+	for w in world:
+		ahit = hit_sphere3(w.centre, w.radius, r)
+		if ahit and ahit.t < closest:
+			#print ("Ray {0} changihng to sphere {1}".format(r,w))
+			closest = ahit.t
+			res = ahit
+
+	return res
+
+def ray_color(r, world):
+	ahit = hit(r, world)
+	if ahit:
+		return 0.5 * (ahit.normal + 1.0)
+
 	unit = unit_vector(r.direction)
 	t = 0.5 * (unit[1] + 1.0)
 	return (1.0 - t) * np.array([1.0, 1.0, 1.0]) + np.array([0.5, 0.7, 1.0])
@@ -57,6 +118,10 @@ def make_ray_ppm(stream = sys.stdout):
 	width = 384
 	height = int (width / aspect_ratio)
 
+	world = list()
+	world.append(sphere(np.array([0,0,-1]), 0.5))
+	world.append(sphere(np.array([0,-100.50,-1]), 100))
+
 	vp_height = 2.0
 	vp_width = aspect_ratio * vp_height
 
@@ -71,7 +136,7 @@ def make_ray_ppm(stream = sys.stdout):
 			u = i / (width - 1)
 			v = j / (height - 1)
 			r = ray(origin, lower_left + u * horiz + v * vert - origin)
-			color = ray_color(r)
+			color = ray_color(r, world)
 			write_color(color, stream)
 
 	
