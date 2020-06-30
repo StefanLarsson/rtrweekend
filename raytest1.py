@@ -14,12 +14,29 @@ class ray:
 
 
 class sphere:
-	""""A sphere class"""
+	"""A sphere class"""
 	def __init__(self, centre, radius):
 		self.centre = centre
 		self.radius = radius
 
 	
+class camera:
+	"""A camera"""
+	def __init__(self):
+		self.aspect = 16 / 9
+		self.vp_h = 2.0
+		self.vp_w = self.aspect * self.vp_h
+		self.focal = 1.0
+
+		self.origin = np.array([0,0,0])
+		self.horiz =  np.array([self.vp_w, 0,0])
+		self.vert =  np.array([0,self.vp_h,0])
+		self.lower_left = self.origin - self.horiz / 2 - self.vert / 2 - np.array([0,0,self.focal])
+
+	def get_ray(self, u,v):
+		return ray(self.origin, self.lower_left + u * self.horiz + v * self.vert - self.origin)
+
+		
 def unit_vector(v):
 	n = np.linalg.norm(v)
 	return v * ( 1/ n)
@@ -122,20 +139,14 @@ def make_ray_ppm(stream = sys.stdout):
 	world.append(sphere(np.array([0,0,-1]), 0.5))
 	world.append(sphere(np.array([0,-100.50,-1]), 100))
 
-	vp_height = 2.0
-	vp_width = aspect_ratio * vp_height
 
-	focal_length = 1.0
-	origin = np.array([0,0,0])
-	horiz = np.array([vp_width, 0, 0])
-	vert  = np.array([0, vp_height, 0])
-	lower_left = origin - (horiz / 2) - (vert / 2) - np.array([0,0,focal_length])
+	cam = camera()
 	stream.write("P3\n{0} {1}\n255\n".format(width, height))
 	for j in range(height - 1, 0, -1):
 		for i in range(width):
 			u = i / (width - 1)
 			v = j / (height - 1)
-			r = ray(origin, lower_left + u * horiz + v * vert - origin)
+			r = cam.get_ray(u,v)
 			color = ray_color(r, world)
 			write_color(color, stream)
 
