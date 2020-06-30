@@ -27,13 +27,13 @@ def hit_sphere(center, radius, ray):
 def hit_sphere2(center, radius, ray):
 	oc = ray.origin - center
 	a = np.dot(ray.direction, ray.direction)
-	b = 2.0 * np.dot (oc, ray.direction)
+	half_b = np.dot (oc, ray.direction)
 	c = np.dot(oc, oc) - radius * radius
-	disc = b * b - 4 * a * c
+	disc = half_b * half_b - a * c
 	if disc < 0:
 		return -1
 	else:
-		return (- b - math.sqrt(disc)) / (2.0 * a)
+		return (- half_b - math.sqrt(disc)) / a
 	
 	
 def ray_color(r):
