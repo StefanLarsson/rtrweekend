@@ -2,6 +2,8 @@ import sys
 import math
 import random
 import numpy as np
+import time
+import profile
 
 
 class ray:
@@ -29,7 +31,7 @@ class camera:
 		self.vp_w = self.aspect * self.vp_h
 		self.focal = 1.0
 
-		self.origin = np.array([0,0,0])
+		self.origin = np.array([0.0,0.0,0.0])
 		self.horiz =  np.array([self.vp_w, 0,0])
 		self.vert =  np.array([0,self.vp_h,0])
 		self.lower_left = self.origin - self.horiz / 2 - self.vert / 2 - np.array([0,0,self.focal])
@@ -45,7 +47,9 @@ def unit_vector(v):
 def hit_sphere(center, radius, ray):
 	oc = ray.origin - center
 	a = np.dot(ray.direction, ray.direction)
-	b = 2.0 * np.dot (oc, ray.direction)
+	#b = 2.0 * np.dot (oc, ray.direction)
+	b = np.dot (oc, ray.direction)
+	b += b
 	c = np.dot(oc, oc) - radius * radius
 	disc = b * b - 4 * a * c
 	return disc > 0
@@ -94,14 +98,17 @@ def hit_sphere3(center, radius, ray):
 			return result
 	return None
 	
+
+c1g = np.array([1.0, 1.0, 1.0])
 def ray_color(r):
+	c1 = c1g
 	t = hit_sphere2(np.array([0,0,-1]), 0.5, r);
 	if ( t > 0.0):
 		N = unit_vector(r.at(t) - np.array([0,0,-1]))
 		return 0.5 * ( N + 1.0)
 	unit = unit_vector(r.direction)
 	t = 0.5 * (unit[1] + 1.0)
-	return (1.0 - t) * np.array([1.0, 1.0, 1.0]) + np.array([0.5, 0.7, 1.0])
+	return (1.0 - t) * c1 + np.array([0.5, 0.7, 1.0])
 
 def hit(r, world):
 	closest = 100000000000
@@ -122,7 +129,8 @@ def ray_color(r, world):
 
 	unit = unit_vector(r.direction)
 	t = 0.5 * (unit[1] + 1.0)
-	return (1.0 - t) * np.array([1.0, 1.0, 1.0]) + np.array([0.5, 0.7, 1.0])
+	return (1.0 - t) * c1g + np.array([0.5, 0.7, 1.0])
+	#return (1.0 - t) * np.array([1.0, 1.0, 1.0]) + np.array([0.5, 0.7, 1.0])
 
 def write_color(color, stream):
 	r = int(color[0] * 256 )
@@ -135,8 +143,12 @@ def make_ray_ppm(stream = sys.stdout):
 	aspect_ratio = 16  / 9
 	width = 384
 	height = int (width / aspect_ratio)
-	samples_per_pixel = 100
+	#samples_per_pixel = 100
+	samples_per_pixel = 5
 
+	t1tot = 0.0
+	t2tot = 0.0
+	t3tot = 0.0
 
 	world = list()
 	world.append(sphere(np.array([0,0,-1]), 0.5))
@@ -148,40 +160,22 @@ def make_ray_ppm(stream = sys.stdout):
 	for j in range(height - 1, 0, -1):
 		sys.stderr.write("{0} rows to go\n".format(j))
 		for i in range(width):
-			color = np.array([0,0,0])
 			for k in range(samples_per_pixel):
+				t = time.time()
+				color = np.array([0.0,0.0,0.0])
+				t1 = time.time()
+				t1tot += (t1 - t)
 				u = (i + random.random()) / (width - 1)
 				v = (j + random.random()) / (height - 1)
+				t2 = time.time()
+				t2tot += (t2 - t1) 
 				r = cam.get_ray(u,v)
-				color = color + ray_color(r, world)
-			color = color * ( 1 / samples_per_pixel)
+				color += ray_color(r, world)
+				t3 = time.time()
+				t3tot += (t3 - t2)
+			color /=   samples_per_pixel
 			write_color(color, stream)
 
-	
-	
-	
-	
-def make_test_ppm(w, h, stream = sys.stdout):
-
-
-	stream.write ("P3\n")
-	stream.write(str(w) + " " + str(h) + '\n')
-	stream.write ("{0}\n".format(255))
-	
-	for j in range(h - 1, 0, -1):
-		sys.err.write("Line {0}".format(j))
-		for i in range(w):
-			r = i / (w - 1.0)
-			g = j / (h - 1.0)
-			b = 0.25
-			ri = int( r * 255)
-			gi = int( g * 255)
-			bi = int( b * 255)
-			stream.write ("{0} {1} {2}\n".format(ri, gi, bi))
-			
-
-
-
-# make_test_ppm(256, 256)
-make_ray_ppm()
+	print ("t1tot = {} t2tot = {} t3tot = {}".format(t1tot, t2tot, t3tot))
+profile.run('make_ray_ppm()')
 
