@@ -44,16 +44,6 @@ def unit_vector(v):
 	n = np.linalg.norm(v)
 	return v * ( 1/ n)
 		
-def hit_sphere(center, radius, ray):
-	oc = ray.origin - center
-	a = np.dot(ray.direction, ray.direction)
-	#b = 2.0 * np.dot (oc, ray.direction)
-	b = np.dot (oc, ray.direction)
-	b += b
-	c = np.dot(oc, oc) - radius * radius
-	disc = b * b - 4 * a * c
-	return disc > 0
-
 def hit_sphere2(center, radius, ray):
 	oc = ray.origin - center
 	a = np.dot(ray.direction, ray.direction)
@@ -71,10 +61,11 @@ class hit_record:
 		self.normal = normal
 
 def hit_sphere3(center, radius, ray):
+	dot = np.dot
 	oc = ray.origin - center
-	a = np.dot(ray.direction, ray.direction)
-	half_b = np.dot (oc, ray.direction)
-	c = np.dot(oc, oc) - radius * radius
+	a = dot(ray.direction, ray.direction)
+	half_b = dot (oc, ray.direction)
+	c = dot(oc, oc) - radius * radius
 	disc = half_b * half_b - a * c
 	if disc < 0:
 		return None
@@ -84,7 +75,7 @@ def hit_sphere3(center, radius, ray):
 		if (temp > 0):
 			p = ray.at(temp)
 			normal = (p - center) / radius
-			if np.dot(normal, ray.direction) > 0:
+			if dot(normal, ray.direction) > 0:
 				normal = -  normal
 			result = hit_record(temp, p, normal)
 			return result
@@ -92,7 +83,7 @@ def hit_sphere3(center, radius, ray):
 		if (temp > 0):
 			p = ray.at(temp)
 			normal = (p - center) / radius
-			if np.dot(normal, ray.direction) > 0:
+			if dot(normal, ray.direction) > 0:
 				normal = -  normal
 			result = hit_record(temp, p, normal)
 			return result
@@ -100,6 +91,7 @@ def hit_sphere3(center, radius, ray):
 	
 
 c1g = np.array([1.0, 1.0, 1.0])
+c2g = np.array([0.5, 0.7, 1.0])
 def ray_color(r):
 	c1 = c1g
 	t = hit_sphere2(np.array([0,0,-1]), 0.5, r);
@@ -129,13 +121,14 @@ def ray_color(r, world):
 
 	unit = unit_vector(r.direction)
 	t = 0.5 * (unit[1] + 1.0)
-	return (1.0 - t) * c1g + np.array([0.5, 0.7, 1.0])
+	return (1.0 - t) * c1g + c2g
+#np.array([0.5, 0.7, 1.0])
 	#return (1.0 - t) * np.array([1.0, 1.0, 1.0]) + np.array([0.5, 0.7, 1.0])
 
 def write_color(color, stream):
-	r = int(color[0] * 256 )
-	g = int(color[1] * 256 )
-	b = int(color[2] * 256 )
+	r = int(color[0] * 255 )
+	g = int(color[1] * 255 )
+	b = int(color[2] * 255 )
 	
 	stream.write("{0} {1} {2}\n".format(r,g,b))
 	
@@ -145,10 +138,6 @@ def make_ray_ppm(stream = sys.stdout):
 	height = int (width / aspect_ratio)
 	#samples_per_pixel = 100
 	samples_per_pixel = 5
-
-	t1tot = 0.0
-	t2tot = 0.0
-	t3tot = 0.0
 
 	world = list()
 	world.append(sphere(np.array([0,0,-1]), 0.5))
@@ -160,22 +149,14 @@ def make_ray_ppm(stream = sys.stdout):
 	for j in range(height - 1, 0, -1):
 		sys.stderr.write("{0} rows to go\n".format(j))
 		for i in range(width):
+			color = np.array([0.0,0.0,0.0])
 			for k in range(samples_per_pixel):
-				t = time.time()
-				color = np.array([0.0,0.0,0.0])
-				t1 = time.time()
-				t1tot += (t1 - t)
 				u = (i + random.random()) / (width - 1)
 				v = (j + random.random()) / (height - 1)
-				t2 = time.time()
-				t2tot += (t2 - t1) 
 				r = cam.get_ray(u,v)
 				color += ray_color(r, world)
-				t3 = time.time()
-				t3tot += (t3 - t2)
 			color /=   samples_per_pixel
 			write_color(color, stream)
-
-	print ("t1tot = {} t2tot = {} t3tot = {}".format(t1tot, t2tot, t3tot))
-profile.run('make_ray_ppm()')
+#profile.run('make_ray_ppm()')
+make_ray_ppm()
 
