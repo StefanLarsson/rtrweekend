@@ -40,20 +40,18 @@ class camera:
 		return ray(self.origin, self.lower_left + u * self.horiz + v * self.vert - self.origin)
 
 		
+def random_unit_helper():
+	return 2 * np.random.random_sample(3) - 1
+
+def random_in_unit():
+	while True:
+		v = random_unit_helper()
+		if np.dot(v,v) <= 1.0:
+			return v
 def unit_vector(v):
 	n = np.linalg.norm(v)
 	return v * ( 1/ n)
 		
-def hit_sphere2(center, radius, ray):
-	oc = ray.origin - center
-	a = np.dot(ray.direction, ray.direction)
-	half_b = np.dot (oc, ray.direction)
-	c = np.dot(oc, oc) - radius * radius
-	disc = half_b * half_b - a * c
-	if disc < 0:
-		return -1
-	else:
-		return (- half_b - math.sqrt(disc)) / a
 class hit_record:
 	def __init__(self, t, p, normal):
 		self.t = t
@@ -92,15 +90,6 @@ def hit_sphere3(center, radius, ray):
 
 c1g = np.array([1.0, 1.0, 1.0])
 c2g = np.array([0.5, 0.7, 1.0])
-def ray_color(r):
-	c1 = c1g
-	t = hit_sphere2(np.array([0,0,-1]), 0.5, r);
-	if ( t > 0.0):
-		N = unit_vector(r.at(t) - np.array([0,0,-1]))
-		return 0.5 * ( N + 1.0)
-	unit = unit_vector(r.direction)
-	t = 0.5 * (unit[1] + 1.0)
-	return (1.0 - t) * c1 + np.array([0.5, 0.7, 1.0])
 
 def hit(r, world):
 	closest = 100000000000
@@ -117,13 +106,12 @@ def hit(r, world):
 def ray_color(r, world):
 	ahit = hit(r, world)
 	if ahit:
-		return 0.5 * (ahit.normal + 1.0)
+		target = ahit.p + ahit.normal + random_in_unit()
+		return 0.5 * ray_color(ray(ahit.p, target - ahit.p), world)
 
 	unit = unit_vector(r.direction)
 	t = 0.5 * (unit[1] + 1.0)
 	return (1.0 - t) * c1g + c2g
-#np.array([0.5, 0.7, 1.0])
-	#return (1.0 - t) * np.array([1.0, 1.0, 1.0]) + np.array([0.5, 0.7, 1.0])
 
 def write_color(color, stream):
 	r = int(color[0] * 255 )
@@ -137,7 +125,7 @@ def make_ray_ppm(stream = sys.stdout):
 	width = 384
 	height = int (width / aspect_ratio)
 	#samples_per_pixel = 100
-	samples_per_pixel = 5
+	samples_per_pixel = 50
 
 	world = list()
 	world.append(sphere(np.array([0,0,-1]), 0.5))
@@ -157,6 +145,10 @@ def make_ray_ppm(stream = sys.stdout):
 				color += ray_color(r, world)
 			color /=   samples_per_pixel
 			write_color(color, stream)
-#profile.run('make_ray_ppm()')
-make_ray_ppm()
+def main():
+	#profile.run('make_ray_ppm()')
+	make_ray_ppm()
+
+if __name__ == "__main__":
+	main()
 
