@@ -25,7 +25,7 @@ class sphere:
 	def hit(self, ray, tmin, tmax):
 		return hit_sphere(self.centre, self.radius, ray, tmin, tmax, self.scatter)
 
-	
+
 class camera:
 	"""A camera"""
 	def __init__(self):
@@ -42,7 +42,7 @@ class camera:
 	def get_ray(self, u,v):
 		return ray(self.origin, self.lower_left + u * self.horiz + v * self.vert - self.origin)
 
-		
+
 def random_unit_helper():
 	return 2 * np.random.random_sample(3) - 1
 
@@ -54,7 +54,7 @@ def random_in_unit():
 def unit_vector(v):
 	n = np.linalg.norm(v)
 	return v * ( 1/ n)
-		
+
 class hit_record:
 	def __init__(self, t, p, normal, scatter):
 		self.t = t
@@ -90,7 +90,7 @@ def hit_sphere(center, radius, ray, tmin, tmax, scatter):
 			result = hit_record(temp, p, normal, scatter)
 			return result
 	return None
-	
+
 
 c1g = np.array([1.0, 1.0, 1.0])
 c2g = np.array([0.5, 0.7, 1.0])
@@ -117,18 +117,32 @@ class lambertian:
 	def __init__(self, color):
 		self.albedo = color
 
-	def scatter(self, hit):
+	def scatter(self, incoming, hit):
 		attenuation = self.albedo
 		scattered_direction = hit.normal + random_in_unit()
 		scattered_ray = ray(hit.p, scattered_direction)
 		return scattered(scattered_ray, attenuation)
-	
+
+def reflect(v, n):
+	return v - 2 * np.dot(v,n) * n
+
+class metal:
+	def __init__(self, color):
+		self.albedo = color
+	def scatter(self, incoming,hit):
+		reflected = reflect(incoming.direction, hit.normal)
+		if np.dot(reflected, hit.normal) <= 0:
+			return None
+		attenuation = self.albedo
+		scattered_ray = ray(hit.p, reflected)
+		return scattered(scattered_ray, attenuation)
+
 def ray_color(r, world, depth):
 	if (depth <= 0):
 		return np.array([0.0, 0.0, 0.0])
 	ahit = hit(r, world, 0, float("inf"))
 	if ahit:
-		scattered = ahit.scatter.scatter(ahit)
+		scattered = ahit.scatter.scatter(r,ahit)
 		if scattered:
 			attenuation = scattered.attenuation
 			direction = scattered.direction
@@ -142,18 +156,19 @@ def ray_color(r, world, depth):
 	return (1.0 - t) * c1g + c2g
 
 def write_color(color, stream):
-	
+
 	r = int(math.sqrt(color[0]) * 255)
 	g = int(math.sqrt(color[1]) * 255)
 	b = int(math.sqrt(color[2]) * 255)
 	stream.write("{0} {1} {2}\n".format(r,g,b))
-	
+
 def make_ray_ppm(stream = sys.stdout):
 	aspect_ratio = 16  / 9
 	width = 384
 	height = int (width / aspect_ratio)
 	#samples_per_pixel = 100
 	samples_per_pixel = 50
+#	samples_per_pixel = 5
 	max_depth = 50
 
 	world = list()
@@ -161,7 +176,8 @@ def make_ray_ppm(stream = sys.stdout):
 	material2 = lambertian(np.array([0.8, 0.2, 0.2]))
 	world.append(sphere(np.array([0,0,-1]), 0.5, material))
 	world.append(sphere(np.array([0,-100.50,-1]), 100, material2))
-
+	material3 = metal(np.array([0.8, 0.6, 0.2]))
+	world.append(sphere(np.array([1.0,0.0,-1.0]), 0.5, material3))
 
 	cam = camera()
 	stream.write("P3\n{0} {1}\n255\n".format(width, height))
