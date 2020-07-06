@@ -116,10 +116,10 @@ def ray_color(r, world, depth):
 	return (1.0 - t) * c1g + c2g
 
 def write_color(color, stream):
-	r = int(color[0] * 255 )
-	g = int(color[1] * 255 )
-	b = int(color[2] * 255 )
 	
+	r = int(math.sqrt(color[0]) * 255)
+	g = int(math.sqrt(color[1]) * 255)
+	b = int(math.sqrt(color[2]) * 255)
 	stream.write("{0} {1} {2}\n".format(r,g,b))
 	
 def make_ray_ppm(stream = sys.stdout):
