@@ -18,9 +18,12 @@ class ray:
 
 class sphere:
 	"""A sphere class"""
-	def __init__(self, centre, radius):
+	def __init__(self, centre, radius, scatter):
 		self.centre = centre
 		self.radius = radius
+		self.scatter = scatter
+	def hit(self, ray, tmin, tmax):
+		return hit_sphere(self.centre, self.radius, ray, tmin, tmax, self.scatter)
 
 	
 class camera:
@@ -53,12 +56,13 @@ def unit_vector(v):
 	return v * ( 1/ n)
 		
 class hit_record:
-	def __init__(self, t, p, normal):
+	def __init__(self, t, p, normal, scatter):
 		self.t = t
 		self.p = p
 		self.normal = normal
+		self.scatter = scatter
 
-def hit_sphere(center, radius, ray, tmin, tmax):
+def hit_sphere(center, radius, ray, tmin, tmax, scatter):
 	dot = np.dot
 	oc = ray.origin - center
 	a = dot(ray.direction, ray.direction)
@@ -75,7 +79,7 @@ def hit_sphere(center, radius, ray, tmin, tmax):
 			normal = (p - center) / radius
 			if dot(normal, ray.direction) > 0:
 				normal = -  normal
-			result = hit_record(temp, p, normal)
+			result = hit_record(temp, p, normal, scatter)
 			return result
 		temp = (- half_b + root) / a
 		if (temp > tmin and temp < tmax):
@@ -83,7 +87,7 @@ def hit_sphere(center, radius, ray, tmin, tmax):
 			normal = (p - center) / radius
 			if dot(normal, ray.direction) > 0:
 				normal = -  normal
-			result = hit_record(temp, p, normal)
+			result = hit_record(temp, p, normal, scatter)
 			return result
 	return None
 	
@@ -95,20 +99,43 @@ def hit(r, world, tmin , tmax):
 	closest = tmax
 	res = None
 	for w in world:
-		ahit = hit_sphere(w.centre, w.radius, r, tmin, tmax)
+		ahit = w.hit(r, tmin, tmax)
 		if ahit and ahit.t < closest:
 			closest = ahit.t
 			res = ahit
 
 	return res
 
+
+class scattered:
+	def __init__(self, direction, attenuation):
+		self.direction = direction
+		self.attenuation = attenuation
+
+
+class lambertian:
+	def __init__(self, color):
+		self.albedo = color
+
+	def scatter(self, hit):
+		attenuation = self.albedo
+		scattered_direction = hit.normal + random_in_unit()
+		scattered_ray = ray(hit.p, scattered_direction)
+		return scattered(scattered_ray, attenuation)
+	
 def ray_color(r, world, depth):
 	if (depth <= 0):
 		return np.array([0.0, 0.0, 0.0])
 	ahit = hit(r, world, 0, float("inf"))
 	if ahit:
-		target = ahit.p + ahit.normal + random_in_unit()
-		return 0.5 * ray_color(ray(ahit.p, target - ahit.p), world, depth - 1)
+		scattered = ahit.scatter.scatter(ahit)
+		if scattered:
+			attenuation = scattered.attenuation
+			direction = scattered.direction
+			return attenuation * ray_color(direction, world, depth - 1)
+		return np.array([0.0,0.0,0.0])
+#		dir = ahit.normal + random_in_unit()
+#		return 0.5 * ray_color(ray(ahit.p, dir), world, depth - 1)
 
 	unit = unit_vector(r.direction)
 	t = 0.5 * (unit[1] + 1.0)
@@ -130,8 +157,10 @@ def make_ray_ppm(stream = sys.stdout):
 	max_depth = 50
 
 	world = list()
-	world.append(sphere(np.array([0,0,-1]), 0.5))
-	world.append(sphere(np.array([0,-100.50,-1]), 100))
+	material = lambertian(np.array([0.5, 0.5, 0.5]))
+	material2 = lambertian(np.array([0.8, 0.2, 0.2]))
+	world.append(sphere(np.array([0,0,-1]), 0.5, material))
+	world.append(sphere(np.array([0,-100.50,-1]), 100, material2))
 
 
 	cam = camera()
