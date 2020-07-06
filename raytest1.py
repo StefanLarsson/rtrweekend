@@ -58,7 +58,7 @@ class hit_record:
 		self.p = p
 		self.normal = normal
 
-def hit_sphere3(center, radius, ray):
+def hit_sphere(center, radius, ray, tmin, tmax):
 	dot = np.dot
 	oc = ray.origin - center
 	a = dot(ray.direction, ray.direction)
@@ -70,7 +70,7 @@ def hit_sphere3(center, radius, ray):
 	else:
 		root = math.sqrt(disc)
 		temp = (- half_b - root) / a
-		if (temp > 0):
+		if (temp > tmin  and temp < tmax):
 			p = ray.at(temp)
 			normal = (p - center) / radius
 			if dot(normal, ray.direction) > 0:
@@ -78,7 +78,7 @@ def hit_sphere3(center, radius, ray):
 			result = hit_record(temp, p, normal)
 			return result
 		temp = (- half_b + root) / a
-		if (temp > 0):
+		if (temp > tmin and temp < tmax):
 			p = ray.at(temp)
 			normal = (p - center) / radius
 			if dot(normal, ray.direction) > 0:
@@ -91,13 +91,12 @@ def hit_sphere3(center, radius, ray):
 c1g = np.array([1.0, 1.0, 1.0])
 c2g = np.array([0.5, 0.7, 1.0])
 
-def hit(r, world):
-	closest = 100000000000
+def hit(r, world, tmin , tmax):
+	closest = tmax
 	res = None
 	for w in world:
-		ahit = hit_sphere3(w.centre, w.radius, r)
+		ahit = hit_sphere(w.centre, w.radius, r, tmin, tmax)
 		if ahit and ahit.t < closest:
-			#print ("Ray {0} changihng to sphere {1}".format(r,w))
 			closest = ahit.t
 			res = ahit
 
@@ -106,7 +105,7 @@ def hit(r, world):
 def ray_color(r, world, depth):
 	if (depth <= 0):
 		return np.array([0.0, 0.0, 0.0])
-	ahit = hit(r, world)
+	ahit = hit(r, world, 0, float("inf"))
 	if ahit:
 		target = ahit.p + ahit.normal + random_in_unit()
 		return 0.5 * ray_color(ray(ahit.p, target - ahit.p), world, depth - 1)
