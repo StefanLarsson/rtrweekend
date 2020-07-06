@@ -103,11 +103,13 @@ def hit(r, world):
 
 	return res
 
-def ray_color(r, world):
+def ray_color(r, world, depth):
+	if (depth <= 0):
+		return np.array([0.0, 0.0, 0.0])
 	ahit = hit(r, world)
 	if ahit:
 		target = ahit.p + ahit.normal + random_in_unit()
-		return 0.5 * ray_color(ray(ahit.p, target - ahit.p), world)
+		return 0.5 * ray_color(ray(ahit.p, target - ahit.p), world, depth - 1)
 
 	unit = unit_vector(r.direction)
 	t = 0.5 * (unit[1] + 1.0)
@@ -126,6 +128,7 @@ def make_ray_ppm(stream = sys.stdout):
 	height = int (width / aspect_ratio)
 	#samples_per_pixel = 100
 	samples_per_pixel = 50
+	max_depth = 50
 
 	world = list()
 	world.append(sphere(np.array([0,0,-1]), 0.5))
@@ -142,7 +145,7 @@ def make_ray_ppm(stream = sys.stdout):
 				u = (i + random.random()) / (width - 1)
 				v = (j + random.random()) / (height - 1)
 				r = cam.get_ray(u,v)
-				color += ray_color(r, world)
+				color += ray_color(r, world, max_depth)
 			color /=   samples_per_pixel
 			write_color(color, stream)
 def main():
