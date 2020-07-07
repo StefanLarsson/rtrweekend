@@ -35,6 +35,7 @@ class camera:
 		self.focal = 1.0
 
 		self.origin = np.array([0.0,0.0,0.0])
+#		self.origin = np.array([0.0,0.0,1.0])
 		self.horiz =  np.array([self.vp_w, 0,0])
 		self.vert =  np.array([0,self.vp_h,0])
 		self.lower_left = self.origin - self.horiz / 2 - self.vert / 2 - np.array([0,0,self.focal])
@@ -166,18 +167,24 @@ def make_ray_ppm(stream = sys.stdout):
 	aspect_ratio = 16  / 9
 	width = 384
 	height = int (width / aspect_ratio)
-	#samples_per_pixel = 100
-	samples_per_pixel = 50
+	samples_per_pixel = 100
+#	samples_per_pixel = 50
 #	samples_per_pixel = 5
 	max_depth = 50
 
 	world = list()
-	material = lambertian(np.array([0.5, 0.5, 0.5]))
-	material2 = lambertian(np.array([0.8, 0.2, 0.2]))
+
+	material = lambertian(np.array([0.7, 0.3, 0.3]))
 	world.append(sphere(np.array([0,0,-1]), 0.5, material))
-	world.append(sphere(np.array([0,-100.50,-1]), 100, material2))
+
+	material2 = lambertian(np.array([0.8, 0.8, 0.0]))
+	world.append(sphere(np.array([0,-100.5,-1]), 100, material2))
+
 	material3 = metal(np.array([0.8, 0.6, 0.2]))
 	world.append(sphere(np.array([1.0,0.0,-1.0]), 0.5, material3))
+
+	material4 = metal(np.array([0.8, 0.8, 0.8]))
+	world.append(sphere(np.array([-1.0,0.0,-1.0]), 0.5, material4))
 
 	cam = camera()
 	stream.write("P3\n{0} {1}\n255\n".format(width, height))
