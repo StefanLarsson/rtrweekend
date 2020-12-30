@@ -91,10 +91,6 @@ def hit_sphere(center, radius, ray, tmin, tmax, scatter):
             return result
     return None
 
-
-c1g = np.array([1.0, 1.0, 1.0])
-c2g = np.array([0.5, 0.7, 1.0])
-
 def hit(r, world, tmin , tmax):
     closest = tmax
     res = None
@@ -129,15 +125,21 @@ def reflect(v, n):
     return v - 2 * np.dot(v,n) * n
 
 class metal:
-    def __init__(self, color):
+    def __init__(self, color, fuzz):
         self.albedo = color
+        self.fuzz = fuzz
     def scatter(self, incoming,hit):
         reflected = reflect(incoming.direction, hit.normal)
+        reflected = reflected + self.fuzz * random_in_unit()
         if np.dot(reflected, hit.normal) <= 0:
             return None
         attenuation = self.albedo
         scattered_ray = ray(hit.p, reflected)
         return scattered(scattered_ray, attenuation)
+
+
+c1g = np.array([1.0, 1.0, 1.0])
+c2g = np.array([0.5, 0.7, 1.0])
 
 def ray_color(r, world, depth):
     if (depth <= 0):
@@ -150,6 +152,7 @@ def ray_color(r, world, depth):
             direction = scattered.direction
             return attenuation * ray_color(direction, world, depth - 1)
         return np.array([0.0,0.0,0.0])
+    # if we pass here we have hit nothing and will use the sky colour
     unit = unit_vector(r.direction)
     t = 0.5 * (unit[1] + 1.0)
     return (1.0 - t) * c1g + c2g
@@ -171,9 +174,9 @@ def make_ray_ppm(stream = sys.stdout):
     aspect_ratio = 16.0  / 9
     width = 400
     height = int (width / aspect_ratio)
-#    samples_per_pixel = 100
+    samples_per_pixel = 100
 #    samples_per_pixel = 50
-    samples_per_pixel = 10
+#    samples_per_pixel = 10
 #    samples_per_pixel = 1
     max_depth = 50
 
@@ -181,8 +184,8 @@ def make_ray_ppm(stream = sys.stdout):
 
     material_ground = lambertian(np.array([0.8, 0.8, 0.0]))
     material_center = lambertian(np.array([0.7, 0.3, 0.3]))
-    material_left = metal(np.array([0.8, 0.8, 0.8]))
-    material_right = metal(np.array([0.8, 0.6, 0.2]))
+    material_left = metal(np.array([0.8, 0.8, 0.8]), 0.3)
+    material_right = metal(np.array([0.8, 0.6, 0.2]), 1.0)
 
     world.append(sphere(np.array([0.0,-100.5,-1.0]), 100.0, material_ground))
     world.append(sphere(np.array([0.0,0.0,-1.0]), 0.5, material_center))
