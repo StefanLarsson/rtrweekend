@@ -151,6 +151,12 @@ def refract (u, n, relative_index):
     return out_perp + out_para
 
 
+def reflectance(cosine, relative_index):
+    """Schlick approximation"""
+    r0 = ( 1.0 - relative_index)  / ( 1.0 + relative_index)
+    r0 = r0 * r0
+    return r0 + (1.0 - r0) * math.pow( 1.0 - cosine, 5)
+
 class dielectric:
     def __init__(self, index):
         self.index = index
@@ -161,8 +167,8 @@ class dielectric:
         unit = unit_vector(incoming.direction)
         cos_theta = -np.dot(unit, hit.normal)
         r2 = relative_index * relative_index
-        if r2 * cos_theta * cos_theta < (r2 - 1.0):
-            # total internal reflection
+        if r2 * cos_theta * cos_theta < (r2 - 1.0) or reflectance(cos_theta, relative_index) > np.random.random():
+            # total internal reflection or just reflection anyway
             direction = reflect(unit, hit.normal)
         else:
             direction = refract(unit, hit.normal, relative_index)
@@ -213,14 +219,16 @@ def make_ray_ppm(stream = sys.stdout):
     world = list()
 
     material_ground = lambertian(np.array([0.8, 0.8, 0.0]))
-    material_center = lambertian(np.array([0.7, 0.3, 0.3]))
+    #material_center = lambertian(np.array([0.7, 0.3, 0.3]))
+    material_center = lambertian(np.array([0.1, 0.2, 0.5]))
     # material_left = metal(np.array([0.8, 0.8, 0.8]), 0.3)
     material_left = dielectric(1.5)
-    material_right = metal(np.array([0.8, 0.6, 0.2]), 1.0)
+    material_right = metal(np.array([0.8, 0.6, 0.2]), 0.0)
 
     world.append(sphere(np.array([0.0,-100.5,-1.0]), 100.0, material_ground))
     world.append(sphere(np.array([0.0,0.0,-1.0]), 0.5, material_center))
     world.append(sphere(np.array([-1.0,0.0,-1.0]), 0.5, material_left))
+    world.append(sphere(np.array([-1.0,0.0,-1.0]), -0.4, material_left))
     world.append(sphere(np.array([1.0,0.0,-1.0]), 0.5, material_right))
 
     cam = camera()
