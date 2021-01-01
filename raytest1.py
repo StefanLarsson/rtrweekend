@@ -62,6 +62,10 @@ class hit_record:
         self.normal = normal
         self.scatter = scatter
 
+    def set_face_normal(self, ray, outward_normal):
+        self.front_face = np.dot(ray.direction, outward_normal) < 0
+        self.normal = outward_normal if self.front_face else -outward_normal
+
 def hit_sphere(center, radius, ray, tmin, tmax, scatter):
     dot = np.dot
     oc = ray.origin - center
@@ -80,6 +84,7 @@ def hit_sphere(center, radius, ray, tmin, tmax, scatter):
             if dot(normal, ray.direction) > 0:
                 normal = -  normal
             result = hit_record(temp, p, normal, scatter)
+            result.set_face_normal(ray, (p - center) / radius)
             return result
         temp = (- half_b + root) / a
         if (temp > tmin and temp < tmax):
@@ -88,6 +93,7 @@ def hit_sphere(center, radius, ray, tmin, tmax, scatter):
             if dot(normal, ray.direction) > 0:
                 normal = -  normal
             result = hit_record(temp, p, normal, scatter)
+            result.set_face_normal(ray, (p - center)/ radius)
             return result
     return None
 
@@ -138,6 +144,30 @@ class metal:
         return scattered(scattered_ray, attenuation)
 
 
+def refract (u, n, relative_index):
+    cos_theta = np.dot(-u,n)
+    out_perp = relative_index * (u + cos_theta * n)
+    out_para = -math.sqrt(1.0 - np.dot(out_perp, out_perp)) * n
+    return out_perp + out_para
+
+
+class dielectric:
+    def __init__(self, index):
+        self.index = index
+
+    def scatter(self, incoming, hit):
+        attenuation = np.array([1.0, 1.0, 1.0])
+        relative_index = 1.0 / self.index if hit.front_face else self.index
+        unit = unit_vector(incoming.direction)
+        cos_theta = -np.dot(unit, hit.normal)
+        r2 = relative_index * relative_index
+        if r2 * cos_theta * cos_theta < (r2 - 1.0):
+            # total internal reflection
+            direction = reflect(unit, hit.normal)
+        else:
+            direction = refract(unit, hit.normal, relative_index)
+        return scattered(ray(hit.p, direction), attenuation)
+
 c1g = np.array([1.0, 1.0, 1.0])
 c2g = np.array([0.5, 0.7, 1.0])
 
@@ -184,7 +214,8 @@ def make_ray_ppm(stream = sys.stdout):
 
     material_ground = lambertian(np.array([0.8, 0.8, 0.0]))
     material_center = lambertian(np.array([0.7, 0.3, 0.3]))
-    material_left = metal(np.array([0.8, 0.8, 0.8]), 0.3)
+    # material_left = metal(np.array([0.8, 0.8, 0.8]), 0.3)
+    material_left = dielectric(1.5)
     material_right = metal(np.array([0.8, 0.6, 0.2]), 1.0)
 
     world.append(sphere(np.array([0.0,-100.5,-1.0]), 100.0, material_ground))
