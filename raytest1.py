@@ -44,12 +44,13 @@ class camera:
         self.horiz =  vp_w * u
         self.vert =  vp_h *v
         self.lower_left = self.origin - self.horiz / 2 - self.vert / 2 - w
-        #self.lower_left = self.origin - self.horiz / 2 - self.vert / 2 - np.array([0.0,0.0,focal])
         self.helper_offset = self.lower_left - self.origin
 
     def get_ray(self, u,v):
-        #return ray(self.origin, self.lower_left + u * self.horiz + v * self.vert - self.origin)
-        return ray(self.origin, self.helper_offset + u * self.horiz + v * self.vert)
+        w = self.helper_offset + u * self.horiz + v * self.vert
+        w = w * (1.0 / math.sqrt(np.dot(w,w)))
+        #return ray(self.origin, self.helper_offset + u * self.horiz + v * self.vert)
+        return ray(self.origin, w)
 
 
 def random_unit_helper():
@@ -61,7 +62,7 @@ def random_in_unit():
         if np.dot(v,v) <= 1.0:
             return v
 def unit_vector(v):
-    n = np.linalg.norm(v)
+    n = math.sqrt(np.dot(v,v))
     return v * ( 1/ n)
 
 
@@ -83,7 +84,9 @@ class hit_record:
 def hit_sphere(center, radius, ray, tmin, tmax, scatter):
     dot = np.dot
     oc = ray.origin - center
-    a = dot(ray.direction, ray.direction) #independent of the sphere!
+    #a = dot(ray.direction, ray.direction) #independent of the sphere!
+    #print ("a = {}".format(dot(ray.direction, ray.direction)))
+    a = 1.0
     half_b = dot (oc, ray.direction) # = dot(ray.origin - center, ray.direction)  = dot(ray.origin, ray.direction) - dot (center, ray.direction)
     c = dot(oc, oc) - radius * radius
     disc = half_b * half_b - a * c
@@ -126,6 +129,7 @@ def hit(r, world, tmin , tmax):
 class scattered:
     def __init__(self, direction, attenuation):
         self.direction = direction
+        self.direction.direction = direction.direction * (1.0 / (math.sqrt(np.dot(direction.direction, direction.direction))))
         self.attenuation = attenuation
 
 
@@ -266,8 +270,8 @@ def make_ray_ppm(stream = sys.stdout):
     #width = 100
     height = int (width / aspect_ratio)
 #    samples_per_pixel = 100
-    samples_per_pixel = 50
-#    samples_per_pixel = 10
+#    samples_per_pixel = 50
+    samples_per_pixel = 10
 #    samples_per_pixel = 1
     max_depth = 50
 
