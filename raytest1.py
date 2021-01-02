@@ -3,7 +3,7 @@ import math
 import random
 import numpy as np
 import time
-import profile
+import cProfile as profile
 
 
 class ray:
@@ -28,19 +28,28 @@ class sphere:
 
 class camera:
     """A camera"""
-    def __init__(self):
+    def __init__(self, lookfrom, lookat, vup, vfov, aspect):
         aspect = 16.0 / 9
-        vp_h = 2.0
+        h = math.tan(vfov / 2)
+        vp_h = 2.0 * h
         vp_w = aspect * vp_h
         focal = 1.0
+        
+        w = unit_vector (lookfrom - lookat)
+        u = unit_vector (cross(vup, w))
+        v = cross(w,u)
 
-        self.origin = np.array([0.0,0.0,0.0])
-        self.horiz =  np.array([vp_w, 0.0,0.0])
-        self.vert =  np.array([0.0,vp_h,0.0])
-        self.lower_left = self.origin - self.horiz / 2 - self.vert / 2 - np.array([0.0,0.0,focal])
+
+        self.origin = lookfrom
+        self.horiz =  vp_w * u
+        self.vert =  vp_h *v
+        self.lower_left = self.origin - self.horiz / 2 - self.vert / 2 - w
+        #self.lower_left = self.origin - self.horiz / 2 - self.vert / 2 - np.array([0.0,0.0,focal])
+        self.helper_offset = self.lower_left - self.origin
 
     def get_ray(self, u,v):
-        return ray(self.origin, self.lower_left + u * self.horiz + v * self.vert - self.origin)
+        #return ray(self.origin, self.lower_left + u * self.horiz + v * self.vert - self.origin)
+        return ray(self.origin, self.helper_offset + u * self.horiz + v * self.vert)
 
 
 def random_unit_helper():
@@ -54,6 +63,11 @@ def random_in_unit():
 def unit_vector(v):
     n = np.linalg.norm(v)
     return v * ( 1/ n)
+
+
+def cross(u, v):
+    """Cross product of 3d vectors"""
+    return np.array([u[1]*v[2] - u[2] * v[1], u[2]*v[0] - u[0]*v[2], u[0]*v[1] - u[1]*v[0]])
 
 class hit_record:
     def __init__(self, t, p, normal, scatter):
@@ -69,11 +83,11 @@ class hit_record:
 def hit_sphere(center, radius, ray, tmin, tmax, scatter):
     dot = np.dot
     oc = ray.origin - center
-    a = dot(ray.direction, ray.direction)
-    half_b = dot (oc, ray.direction)
+    a = dot(ray.direction, ray.direction) #independent of the sphere!
+    half_b = dot (oc, ray.direction) # = dot(ray.origin - center, ray.direction)  = dot(ray.origin, ray.direction) - dot (center, ray.direction)
     c = dot(oc, oc) - radius * radius
     disc = half_b * half_b - a * c
-    if disc < 0:
+    if disc < 0.0:
         return None
     else:
         root = math.sqrt(disc)
@@ -101,7 +115,7 @@ def hit(r, world, tmin , tmax):
     closest = tmax
     res = None
     for w in world:
-        ahit = w.hit(r, tmin, tmax)
+        ahit = w.hit(r, tmin, tmax) # this is creating new hit records all the time?
         if ahit and ahit.t < closest:
             closest = ahit.t
             res = ahit
@@ -206,16 +220,7 @@ def write_color(color, stream):
         b = 255
     stream.write("{0} {1} {2}\n".format(r,g,b))
 
-def make_ray_ppm(stream = sys.stdout):
-    aspect_ratio = 16.0  / 9
-    width = 400
-    height = int (width / aspect_ratio)
-    samples_per_pixel = 100
-#    samples_per_pixel = 50
-#    samples_per_pixel = 10
-#    samples_per_pixel = 1
-    max_depth = 50
-
+def three_spheres_world():
     world = list()
 
     material_ground = lambertian(np.array([0.8, 0.8, 0.0]))
@@ -230,10 +235,49 @@ def make_ray_ppm(stream = sys.stdout):
     world.append(sphere(np.array([-1.0,0.0,-1.0]), 0.5, material_left))
     world.append(sphere(np.array([-1.0,0.0,-1.0]), -0.4, material_left))
     world.append(sphere(np.array([1.0,0.0,-1.0]), 0.5, material_right))
+    return world
 
-    cam = camera()
+def random_world():
+    world = list()
+
+    material_ground = lambertian(np.array([0.5, 0.5, 0.5]))
+    world.append(sphere(np.array([0.0,-1000.0,0.0]), 1000.0, material_ground))
+
+    material1 = dielectric(1.5);
+    world.append(sphere(np.array([-0.0, 1.0, 0.0]), 1.0, material1));
+
+    material2 = lambertian(np.array([0.4, 0.2, 0.1]));
+    world.append(sphere(np.array([-4.0, 1.0, 0.0]), 1.0, material2));
+
+    material3 = metal(np.array([0.7, 0.6, 0.5]), 0.0);
+    world.append(sphere(np.array([4.0, 1.0, 0.0]), 1.0, material3));
+
+    for a in range (-5, 5):
+        for b in range (-5, 5):
+            centre = np.array([a + random.random(), 0.2, b + random.random()])
+            material = lambertian(np.random.random_sample(3))
+            world.append(sphere(centre, 0.2, material))
+    return world
+
+
+def make_ray_ppm(stream = sys.stdout):
+    aspect_ratio = 16.0  / 9
+    width = 400
+    #width = 100
+    height = int (width / aspect_ratio)
+#    samples_per_pixel = 100
+    samples_per_pixel = 50
+#    samples_per_pixel = 10
+#    samples_per_pixel = 1
+    max_depth = 50
+
+    #world = three_spheres_world()
+    world = random_world()
+
+    #cam = camera(np.array([-2.0, 2.0, 1.0]), np.array([0.0,0.0,-1.0]),np.array([0.0, 1.0, 0.0]), math.pi/9.0 , aspect_ratio )
+    cam = camera(np.array([13.0, 2.0, 3.0]), np.array([0.0,0.0,-0.0]),np.array([0.0, 1.0, 0.0]), math.pi/9.0 , aspect_ratio )
     stream.write("P3\n{0} {1}\n255\n".format(width, height))
-    for j in range(height - 1, 0, -1):
+    for j in range(height - 1, -1, -1):
         sys.stderr.write("{0} rows to go\n".format(j))
         for i in range(width):
             color = np.array([0.0,0.0,0.0])
@@ -249,8 +293,9 @@ def make_ray_ppm(stream = sys.stdout):
             color /=   samples_per_pixel
             write_color(color, stream)
 def main():
-    #profile.run('make_ray_ppm()')
-    make_ray_ppm()
+    profile.run('make_ray_ppm()', 'testit')
+#    profile.run('make_ray_ppm()')
+    #make_ray_ppm()
 
 if __name__ == "__main__":
     main()
