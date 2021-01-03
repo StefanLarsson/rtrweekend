@@ -23,8 +23,75 @@ class sphere:
         self.radius = radius
         self.scatter = scatter
     def hit(self, ray, tmin, tmax):
-        return hit_sphere(self.centre, self.radius, ray, tmin, tmax, self.scatter)
+        dot = np.dot
+        oc = ray.origin - self.centre
+        #a = dot(ray.direction, ray.direction) #independent of the sphere!
+        #print ("a = {}".format(dot(ray.direction, ray.direction)))
+        a = 1.0
+        half_b = dot (oc, ray.direction) # = dot(ray.origin - center, ray.direction)  = dot(ray.origin, ray.direction) - dot (center, ray.direction)
+        c = dot(oc, oc) - self.radius * self.radius
+        disc = half_b * half_b - a * c
+        if disc < 0.0:
+            return None
+    #    if half_b > 0.0 and c > 0.0:
+    #        return None
+        else:
+            root = math.sqrt(disc)
+            temp = (- half_b - root) / a
+            if (temp > tmin  and temp < tmax):
+                p = ray.at(temp)
+                normal = (p - self.centre) / self.radius
+                if dot(normal, ray.direction) > 0:
+                    normal = -  normal
+                result = hit_record(temp, p, normal, self.scatter)
+                result.set_face_normal(ray, (p - self.centre) / self.radius)
+                return result
+            temp = (- half_b + root) / a
+            if (temp > tmin and temp < tmax):
+                p = ray.at(temp)
+                normal = (p - self.centre) / self.radius
+                if dot(normal, ray.direction) > 0:
+                    normal = -  normal
+                result = hit_record(temp, p, normal, self.scatter)
+                result.set_face_normal(ray, (p - self.centre)/self.radius)
+                return result
+        return None
+        #return hit_sphere(self.centre, self.radius, ray, tmin, tmax, self.scatter)
 
+def hit_sphere(center, radius, ray, tmin, tmax, scatter):
+    dot = np.dot
+    oc = ray.origin - center
+    #a = dot(ray.direction, ray.direction) #independent of the sphere!
+    #print ("a = {}".format(dot(ray.direction, ray.direction)))
+    a = 1.0
+    half_b = dot (oc, ray.direction) # = dot(ray.origin - center, ray.direction)  = dot(ray.origin, ray.direction) - dot (center, ray.direction)
+    c = dot(oc, oc) - radius * radius
+    disc = half_b * half_b - a * c
+    if disc < 0.0:
+        return None
+#    if half_b > 0.0 and c > 0.0:
+#        return None
+    else:
+        root = math.sqrt(disc)
+        temp = (- half_b - root) / a
+        if (temp > tmin  and temp < tmax):
+            p = ray.at(temp)
+            normal = (p - center) / radius
+            if dot(normal, ray.direction) > 0:
+                normal = -  normal
+            result = hit_record(temp, p, normal, scatter)
+            result.set_face_normal(ray, (p - center) / radius)
+            return result
+        temp = (- half_b + root) / a
+        if (temp > tmin and temp < tmax):
+            p = ray.at(temp)
+            normal = (p - center) / radius
+            if dot(normal, ray.direction) > 0:
+                normal = -  normal
+            result = hit_record(temp, p, normal, scatter)
+            result.set_face_normal(ray, (p - center)/ radius)
+            return result
+    return None
 
 class camera:
     """A camera"""
@@ -81,38 +148,6 @@ class hit_record:
         self.front_face = np.dot(ray.direction, outward_normal) < 0
         self.normal = outward_normal if self.front_face else -outward_normal
 
-def hit_sphere(center, radius, ray, tmin, tmax, scatter):
-    dot = np.dot
-    oc = ray.origin - center
-    #a = dot(ray.direction, ray.direction) #independent of the sphere!
-    #print ("a = {}".format(dot(ray.direction, ray.direction)))
-    a = 1.0
-    half_b = dot (oc, ray.direction) # = dot(ray.origin - center, ray.direction)  = dot(ray.origin, ray.direction) - dot (center, ray.direction)
-    c = dot(oc, oc) - radius * radius
-    disc = half_b * half_b - a * c
-    if disc < 0.0:
-        return None
-    else:
-        root = math.sqrt(disc)
-        temp = (- half_b - root) / a
-        if (temp > tmin  and temp < tmax):
-            p = ray.at(temp)
-            normal = (p - center) / radius
-            if dot(normal, ray.direction) > 0:
-                normal = -  normal
-            result = hit_record(temp, p, normal, scatter)
-            result.set_face_normal(ray, (p - center) / radius)
-            return result
-        temp = (- half_b + root) / a
-        if (temp > tmin and temp < tmax):
-            p = ray.at(temp)
-            normal = (p - center) / radius
-            if dot(normal, ray.direction) > 0:
-                normal = -  normal
-            result = hit_record(temp, p, normal, scatter)
-            result.set_face_normal(ray, (p - center)/ radius)
-            return result
-    return None
 
 def hit(r, world, tmin , tmax):
     closest = tmax
